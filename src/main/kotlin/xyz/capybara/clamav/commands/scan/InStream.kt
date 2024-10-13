@@ -24,9 +24,17 @@ internal class InStream(private val inputStream: InputStream,
     private val chunkSize = chunkSize.takeIf { it > 0 }
         ?: throw InvalidOptionValueException(commandString, "chunkSize", "must be greater than 0")
 
-    override fun send(server: InetSocketAddress): ScanResult {
+    override fun send(server: InetSocketAddress, timeout: Int): ScanResult {
         try {
-            SocketChannel.open(server).use {
+            SocketChannel.open().use {
+                if (timeout > -1) {
+                    it.socket().also {
+                        it.soTimeout = timeout
+                        it.connect(server, timeout)
+                    }
+                } else {
+                    it.connect(server)
+                }
                 it.write(rawCommand)
 
                 // ByteBuffer order must be big-endian ( == network byte order)
